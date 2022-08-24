@@ -1,4 +1,4 @@
-process BWAMEM_ALIGN {
+process BWAMEM2_MEM {
     tag "$meta.id"
     label 'process_high'
 
@@ -8,13 +8,12 @@ process BWAMEM_ALIGN {
 
     input:
     tuple val(meta), path(reads)
-    path  index
+    path index
+    val   sort_bam
 
     output:
-    tuple val(meta), path("*.bam")                   , emit: bam
-    tuple val(meta), path("*.log")                   , emit: summary
-    tuple val(meta), path("*fastq.gz"), optional:true, emit: fastq
-    path  "versions.yml"                             , emit: versions
+    tuple val(meta), path("*.bam"), emit: bam
+    path  "versions.yml"          , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -33,6 +32,17 @@ process BWAMEM_ALIGN {
         \$INDEX \\
         $reads \\
         | samtools $samtools_command $args2 -@ $task.cpus -o ${prefix}.bam -
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        bwamem2: \$(echo \$(bwa-mem2 version 2>&1) | sed 's/.* //')
+        samtools: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
+    END_VERSIONS
+    """
+
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    """
+    touch ${prefix}.bam
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         bwamem2: \$(echo \$(bwa-mem2 version 2>&1) | sed 's/.* //')

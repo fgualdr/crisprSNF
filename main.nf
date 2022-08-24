@@ -63,6 +63,8 @@ if (params.input) { ch_input = file(params.input, checkIfExists: true) } else { 
 
 if (params.aligner) { ch_aligner = params.aligner } else { exit 1, 'Aligner not specified! Can be bowtie2 or bwa' }
 
+if (params.sort_bam) { ch_sort_bam = params.sort_bam } else { ch_sort_bam = true }
+
 def prepareToolIndices  = []
 prepareToolIndices << params.aligner
 
@@ -102,7 +104,7 @@ println "aligner $params.aligner "
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 /* --                                                                     -- */
-/* --                     PARSE DESIGN FILE                               -- */
+/* --                     LOAD SUBWORKFLOWS                               -- */
 /* --                                                                     -- */
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -200,14 +202,14 @@ workflow CRISPRSNF {
 
         ALIGN_BWA (
             ch_filtered_reads,
-            PREPARE_GENOME.out.bwa_index
+            PREPARE_GENOME.out.bwa_index,
+            ch_sort_bam
         )
         ch_genome_bam        = ALIGN_BWA.out.bam
         ch_genome_bam_index  = ALIGN_BWA.out.bai
         ch_samtools_stats    = ALIGN_BWA.out.stats
         ch_samtools_flagstat = ALIGN_BWA.out.flagstat
         ch_samtools_idxstats = ALIGN_BWA.out.idxstats
-        ch_hisat2_multiqc    = ALIGN_BWA.out.summary
 
         ch_versions = ch_versions.mix(ALIGN_BWA.out.versions)
 
@@ -231,7 +233,7 @@ workflow CRISPRSNF {
 
 
     }else{
-        exit 1, "ERROR: aligner must be bwa "
+        exit 1, "ERROR: aligner must be bwa"
     }
     
        
