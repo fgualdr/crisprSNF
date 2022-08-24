@@ -24,27 +24,26 @@ workflow FASTQC_CUTADAP_UMI {
     fastqc_zip  = FASTQC.out.zip
     ch_versions = ch_versions.mix(FASTQC.out.versions.first())
 
+    // iii) assign Umi to R1 discard R2
+    umi_reads    = reads
+    umi_log      = Channel.empty()
+
+    UMIEXTRACT ( reads ).reads.set { umi_reads }
+    umi_log = UMIEXTRACT.out.log
 
     // ii) Cupadapers 
-    trim_reads    = reads
+    trim_reads    = umi_reads
     untrimmed = Channel.empty()
     trim_log      = Channel.empty()
     
-    CUTADAP ( reads ).reads.set { trim_reads }
+    CUTADAP ( umi_reads ).reads.set { trim_reads }
     untrimmed = CUTADAP.out.untrimmed
     trim_log = CUTADAP.out.log
     ch_versions   = ch_versions.mix(CUTADAP.out.versions.first())
 
-    // iii) assign Umi to R1 discard R2
-    umi_reads    = trim_reads
-    umi_log      = Channel.empty()
-
-    UMIEXTRACT ( trim_reads ).reads.set { umi_reads }
-    umi_log = CUTADAP.out.log
-
     emit:
 
-    reads = umi_reads // channel: [ val(meta), [ reads ] ]
+    reads = trim_reads // channel: [ val(meta), [ reads ] ]
 
     untrimmed  = untrimmed    // channel: [ val(meta), [ reads ] ]
     trim_log   = trim_log        // channel: [ val(meta), [ log ] ]

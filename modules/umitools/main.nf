@@ -20,6 +20,7 @@ process UMIEXTRACT {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+
     def umi_length = meta.umi_length.toInteger()
     def pattern = 'N'*umi_length
 
@@ -29,25 +30,21 @@ process UMIEXTRACT {
     // Therefore we need to swap r1 and r2:
 
     """
-    [ ! -f  ${prefix}_1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_1.fastq.gz
-    [ ! -f  ${prefix}_2.fastq.gz ] && ln -s ${reads[1]} ${prefix}_2.fastq.gz
-
     umi_tools extract \\
-            -I ${prefix}_2.fastq.gz \\
-            -S ${prefix}.umi_extract_2.fastq.gz\\
-            --read2-in=${prefix}_1.fastq.gz \\
+            -I ${reads[1]} \\
+            --read2-in=${reads[0]} \\
+            -S ${prefix}.umi_extract_2.fastq.gz \\
             --read2-out=${prefix}.umi_extract_1.fastq.gz \\
             --bc-pattern=$pattern \\
             $args \\
             > ${prefix}.umi_extract.log
-    
-    rm -rf ${prefix}.umi_extract_2.fastq.gz
 
+    rm -rf ${prefix}.umi_extract_2.fastq.gz
+    
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
             umitools: \$(umi_tools --version 2>&1 | sed 's/^.*UMI-tools version://; s/ *\$//')
     END_VERSIONS
-
     """
     
 }

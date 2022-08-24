@@ -36,171 +36,55 @@ process CUTADAP {
 
     // define r1_adapter, r2_adapter
     def r1_scaffold = meta.r1_scaffold_trim
-    def r2_scaffold = meta.r2_scaffold_trim
-
     def r1_scaffold_pos = meta.r1_scaffold_pos
-    def r2_scaffold_pos = meta.r2_scaffold_pos
-
-    def glength = meta.grnalength
-    def umi_length = meta.umi_length
+    def glength = meta.grnalength.toInteger()
 
     if (r1_scaffold_pos == '3p') {
-        if (r2_scaffold_pos == '3p') {
-            println '3p R1 trimming and 3p R2 trimming'
+        println '3p R1 trimming'
 
-            """
-            [ ! -f  ${prefix}_1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_1.fastq.gz
-            [ ! -f  ${prefix}_2.fastq.gz ] && ln -s ${reads[1]} ${prefix}_2.fastq.gz
-
-            cutadapt \\
-                    $args \\
-                    --json=${prefix}.cutadapt.json \\
-                    --cores=$cores \\
-                    -m 1 \\
-                    -a $r1_scaffold \\
-                    -A $r2_scaffold \\
-                    -o ${prefix}_1.trimmed.fastq.gz \\
-                    -p ${prefix}_2.trimmed.fastq.gz \\
-                    --untrimmed-output ${prefix}_1.untrimmed.fastq.gz \\
-                    --untrimmed-paired-output ${prefix}_2.untrimmed.fastq.gz \\
-                    ${prefix}_1.fastq.gz \\
-                    ${prefix}_2.fastq.gz > ${prefix}.cutadapt.log
-            
-            
-            cutadapt -l $glength  -o ${prefix}_1.trimmed_length.fastq.gz ${prefix}_1.trimmed.fastq.gz 
-            rm ${prefix}_1.trimmed.fastq.gz 
-            mv ${prefix}_1.trimmed_length.fastq.gz ${prefix}_1.trimmed.fastq.gz 
-
-            cutadapt -l $umi_length  -o ${prefix}_2.trimmed_length.fastq.gz ${prefix}_2.trimmed.fastq.gz 
-            rm ${prefix}_2.trimmed.fastq.gz 
-            mv ${prefix}_2.trimmed_length.fastq.gz ${prefix}_2.trimmed.fastq.gz 
+        """
+        [ ! -f  ${prefix}_1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_1.fastq.gz
+        cutadapt \\
+                $args \\
+                --json=${prefix}.cutadapt.json \\
+                --cores=$cores \\
+                -m 1 \\
+                -l $glength \\
+                -a $r1_scaffold \\
+                -o ${prefix}_1.trimmed.fastq.gz \\
+                --untrimmed-output ${prefix}_1.untrimmed.fastq.gz \\
+                ${prefix}_1.fastq.gz  > ${prefix}.cutadapt.log
                     
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                cutadapt: \$(echo \$(cutadapt --version 2>&1) | sed 's/^.*version //; s/Last.*\$//')
-            END_VERSIONS
-            """
-        
-        } else if (r2_scaffold_pos == '5p') {
-            println '3p R1 trimming and 5p R2 trimming'
-            // 3' R1 trimming and 5' R2 trimming
-        
-            """
-            [ ! -f  ${prefix}_1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_1.fastq.gz
-            [ ! -f  ${prefix}_2.fastq.gz ] && ln -s ${reads[1]} ${prefix}_2.fastq.gz
-
-            cutadapt \\
-                    $args \\
-                    --json=${prefix}.cutadapt.json \\
-                    --cores=$cores \\
-                    -m 1 \\
-                    --length $glength \\
-                    -a $r1_scaffold \\
-                    -G $r2_scaffold \\
-                    -o ${prefix}_1.trimmed.fastq.gz \\
-                    -p ${prefix}_2.trimmed.fastq.gz \\
-                    --untrimmed-output ${prefix}_1.untrimmed.fastq.gz \\
-                    --untrimmed-paired-output ${prefix}_2.untrimmed.fastq.gz \\
-                    ${prefix}_1.fastq.gz \\
-                    ${prefix}_2.fastq.gz > ${prefix}.cutadapt.log
-
-            cutadapt -l $glength  -o ${prefix}_1.trimmed_length.fastq.gz ${prefix}_1.trimmed.fastq.gz 
-            rm ${prefix}_1.trimmed.fastq.gz 
-            mv ${prefix}_1.trimmed_length.fastq.gz ${prefix}_1.trimmed.fastq.gz 
-
-            cutadapt -l $umi_length  -o ${prefix}_2.trimmed_length.fastq.gz ${prefix}_2.trimmed.fastq.gz 
-            rm ${prefix}_2.trimmed.fastq.gz 
-            mv ${prefix}_2.trimmed_length.fastq.gz ${prefix}_2.trimmed.fastq.gz 
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                cutadapt: \$(echo \$(cutadapt --version 2>&1) | sed 's/^.*version //; s/Last.*\$//')
-            END_VERSIONS
-            """
-        
-        } 
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            cutadapt: \$(echo \$(cutadapt --version 2>&1) | sed 's/^.*version //; s/Last.*\$//')
+        END_VERSIONS
+        """
 
     }else if (r1_scaffold_pos == '5p') {
-        if (r2_scaffold_pos == '3p') {
-            println '5p R1 trimming and 3p R2 trimming'
-            // 3' R1 trimming and 3' R2 trimming
 
-            """
-            [ ! -f  ${prefix}_1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_1.fastq.gz
-            [ ! -f  ${prefix}_2.fastq.gz ] && ln -s ${reads[1]} ${prefix}_2.fastq.gz
+        println '5p R1 trimming '
+        // 3' R1 trimming and 3' R2 trimming
 
-            cutadapt \\
-                    $args \\
-                    --json=${prefix}.cutadapt.json \\
-                    --cores=$cores \\
-                    -m 1 \\
-                    --length $glength \\
-                    -g $r1_scaffold \\
-                    -A $r2_scaffold \\
-                    -o ${prefix}_1.trimmed.fastq.gz \\
-                    -p ${prefix}_2.trimmed.fastq.gz \\
-                    --untrimmed-output ${prefix}_1.untrimmed.fastq.gz \\
-                    --untrimmed-paired-output ${prefix}_2.untrimmed.fastq.gz \\
-                    ${prefix}_1.fastq.gz \\
-                    ${prefix}_2.fastq.gz > ${prefix}.cutadapt.log
-
-            cutadapt -l $glength  -o ${prefix}_1.trimmed_length.fastq.gz ${prefix}_1.trimmed.fastq.gz 
-            rm ${prefix}_1.trimmed.fastq.gz 
-            mv ${prefix}_1.trimmed_length.fastq.gz ${prefix}_1.trimmed.fastq.gz 
-
-            cutadapt -l $umi_length  -o ${prefix}_2.trimmed_length.fastq.gz ${prefix}_2.trimmed.fastq.gz 
-            rm ${prefix}_2.trimmed.fastq.gz 
-            mv ${prefix}_2.trimmed_length.fastq.gz ${prefix}_2.trimmed.fastq.gz 
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                cutadapt: \$(echo \$(cutadapt --version 2>&1) | sed 's/^.*version //; s/Last.*\$//')
-            END_VERSIONS
-            """
-
+        """
+        [ ! -f  ${prefix}_1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_1.fastq.gz
+        cutadapt \\
+                $args \\
+                --json=${prefix}.cutadapt.json \\
+                --cores=$cores \\
+                -m 1 \\
+                -l $glength \\
+                -g $r1_scaffold \\
+                -o ${prefix}_1.trimmed.fastq.gz \\
+                --untrimmed-output ${prefix}_1.untrimmed.fastq.gz \\
+                ${prefix}_1.fastq.gz  > ${prefix}.cutadapt.log
+                    
+        cat <<-END_VERSIONS > versions.yml
+        "${task.process}":
+            cutadapt: \$(echo \$(cutadapt --version 2>&1) | sed 's/^.*version //; s/Last.*\$//')
+        END_VERSIONS
+        """
         
-        } else if (r2_scaffold_pos == '5p') {
-            println '5p R1 trimming and 5p R2 trimming'
-            // 3' R1 trimming and 5' R2 trimming
-
-            """
-            [ ! -f  ${prefix}_1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_1.fastq.gz
-            [ ! -f  ${prefix}_2.fastq.gz ] && ln -s ${reads[1]} ${prefix}_2.fastq.gz
-
-            cutadapt \\
-                    $args \\
-                    --json=${prefix}.cutadapt.json \\
-                    --cores=$cores \\
-                    -m 1 \\
-                    --length $glength \\
-                    -g $r1_scaffold \\
-                    -G $r2_scaffold \\
-                    -o ${prefix}_1.trimmed.fastq.gz \\
-                    -p ${prefix}_2.trimmed.fastq.gz \\
-                    --untrimmed-output ${prefix}_1.untrimmed.fastq.gz \\
-                    --untrimmed-paired-output ${prefix}_2.untrimmed.fastq.gz \\
-                    ${prefix}_1.fastq.gz \\
-                    ${prefix}_2.fastq.gz > ${prefix}.cutadapt.log
-
-            cutadapt -l $glength  -o ${prefix}_1.trimmed_length.fastq.gz ${prefix}_1.trimmed.fastq.gz 
-            rm ${prefix}_1.trimmed.fastq.gz 
-            mv ${prefix}_1.trimmed_length.fastq.gz ${prefix}_1.trimmed.fastq.gz 
-
-            cutadapt -l $umi_length  -o ${prefix}_2.trimmed_length.fastq.gz ${prefix}_2.trimmed.fastq.gz 
-            rm ${prefix}_2.trimmed.fastq.gz 
-            mv ${prefix}_2.trimmed_length.fastq.gz ${prefix}_2.trimmed.fastq.gz 
-
-            cat <<-END_VERSIONS > versions.yml
-            "${task.process}":
-                cutadapt: \$(echo \$(cutadapt --version 2>&1) | sed 's/^.*version //; s/Last.*\$//')
-            END_VERSIONS
-            """
-        
-        } 
     }
-
-
-
-
     
 }
