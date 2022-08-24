@@ -2,9 +2,9 @@
 // Read QC, RM scaffold, select gRNA and UMI 
 //
 
-include { FASTQC           } from '../modules/fastqc/main'
-include { CUTADAP       } from '../modules/cutadap/main'
-include { UMIEXTRACT       } from '../modules/umitools/main'
+include { FASTQC           } from '../modules/fastqc/fastqc'
+include { CUTADAP       } from '../modules/cutadap/cutadap'
+include { UMIEXTRACT       } from '../modules/umitools/umiextract'
 
 // include { UMITOOLS_EXTRACT } from '../modules/umitools/main'
 

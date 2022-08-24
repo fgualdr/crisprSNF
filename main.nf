@@ -92,7 +92,6 @@ if (params.bowtie_index) {
         .set { ch_bowtie_index }
 }
 
-
 params.publish_dir_mode = 'copy'
 
 println "input $params.input "
@@ -113,8 +112,7 @@ include { CONCAT_FASTQ } from './subworkflow/02_cat_fastq'
 include { FASTQC_CUTADAP_UMI } from './subworkflow/03_fastqc_cutadap_umi'
 include { PREPARE_GENOME } from './subworkflow/04_prepare_genoma'
 include { ALIGN_BWA } from './subworkflow/05_align_bwa'
-
-// include { DEDUP_UMI_UMITOOLS } from './subworkflow/06_dedup_umi_tools'
+include { DEDUP_UMI_UMITOOLS } from './subworkflow/06_dedup_umi_tools'
 // include { QUANTIFY } from '../subworkflows/local/07_quantify'
 
 workflow CRISPRSNF {
@@ -217,7 +215,8 @@ workflow CRISPRSNF {
         // Dedup aligned BAMs using UMI
 
         DEDUP_UMI_UMITOOLS (
-            ch_genome_bam.join(ch_genome_bam_index, by: [0])
+            ch_genome_bam.join(ch_genome_bam_index, by: [0]),
+            params.umitools_dedup_stats
         )
         ch_genome_bam        = DEDUP_UMI_UMITOOLS.out.bam
         ch_genome_bam_index  = DEDUP_UMI_UMITOOLS.out.bai
