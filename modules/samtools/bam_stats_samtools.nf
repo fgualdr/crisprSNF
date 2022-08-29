@@ -2,9 +2,9 @@
 // Run SAMtools stats, flagstat and idxstats
 //
 
-include { SAMTOOLS_STATS    } from '../../modules/samtools/stats_samtools'
-include { SAMTOOLS_IDXSTATS } from '../../modules/samtools/idxstats_samtools'
-include { SAMTOOLS_FLAGSTAT } from '../../modules/samtools/flagstat_samtools'
+include { SAMTOOLS_FLAGSTAT    } from '../../modules/samtools/flagstat/samtools_flagstat' 
+include { SAMTOOLS_IDXSTATS } from '../../modules/samtools/idxstats/idxstats_samtools'
+include { SAMTOOLS_STATS } from '../../modules/samtools/stat/samtools_stat'
 
 workflow BAM_STATS_SAMTOOLS {
     take:

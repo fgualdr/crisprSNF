@@ -11,8 +11,6 @@ process SAMTOOLS_INDEX {
 
     output:
     tuple val(meta), path("*.bai") , optional:true, emit: bai
-    tuple val(meta), path("*.csi") , optional:true, emit: csi
-    tuple val(meta), path("*.crai"), optional:true, emit: crai
     path  "versions.yml"           , emit: versions
 
     when:
@@ -35,8 +33,6 @@ process SAMTOOLS_INDEX {
     stub:
     """
     touch ${input}.bai
-    touch ${input}.crai
-    touch ${input}.csi
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         samtools: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')

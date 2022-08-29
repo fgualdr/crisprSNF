@@ -1,6 +1,6 @@
 process SAMTOOLS_SORT {
     tag "$meta.id"
-    label 'process_medium'
+    label 'process_high'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/samtools:1.15.1--h1170115_0' :
@@ -19,13 +19,26 @@ process SAMTOOLS_SORT {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+    
+    def avail_mem = task.memory ? ((task.memory.toGiga() - 6) / task.cpus).trunc() : false
+    def sort_mem = avail_mem && avail_mem > 2 ? "-m ${avail_mem}G" : '"-m 2G"'
+
     if ("$bam" == "${prefix}.bam") error "Input and output names are the same, use \"task.ext.prefix\" to disambiguate!"
     """
-    samtools sort $args -@ $task.cpus -o ${prefix}.bam -T $prefix $bam
+    samtools sort $args-@ ${task.cpus} $sort_mem -o ${prefix}.bam -T $prefix $bam
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         samtools: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
     END_VERSIONS
     """
 
+    stub:
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    """
+    touch ${prefix}.bam
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
+    END_VERSIONS
+    """
 }

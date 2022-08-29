@@ -65,6 +65,11 @@ if (params.aligner) { ch_aligner = params.aligner } else { exit 1, 'Aligner not 
 
 if (params.sort_bam) { ch_sort_bam = params.sort_bam } else { ch_sort_bam = true }
 
+if (params.umitools_dedup_stats) { ch_umitools_dedup_stats = params.umitools_dedup_stats } else { ch_umitools_dedup_stats = true }
+
+ch_multiqc_config        = ''
+ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config) : Channel.empty()
+
 def prepareToolIndices  = []
 prepareToolIndices << params.aligner
 
@@ -94,6 +99,8 @@ if (params.bowtie_index) {
         .set { ch_bowtie_index }
 }
 
+def multiqc_report      = []
+
 params.publish_dir_mode = 'copy'
 
 println "input $params.input "
@@ -115,7 +122,9 @@ include { FASTQC_CUTADAP_UMI } from './subworkflow/03_fastqc_cutadap_umi'
 include { PREPARE_GENOME } from './subworkflow/04_prepare_genoma'
 include { ALIGN_BWA } from './subworkflow/05_align_bwa'
 include { DEDUP_UMI_UMITOOLS } from './subworkflow/06_dedup_umi_tools'
-// include { QUANTIFY } from '../subworkflows/local/07_quantify'
+include { SAMTOOLS_SORT               } from './modules/samtools/sort/samtools_sort'
+include { MULTIQC                            } from './modules/multiqc'
+include { CUSTOM_DUMPSOFTWAREVERSIONS } from './modules/dumpsoftwareversions/dumpsoftwareversions'
 
 workflow CRISPRSNF {
 
@@ -199,12 +208,11 @@ workflow CRISPRSNF {
 
         // STEP 04.b
         // Check align
-
         ALIGN_BWA (
             ch_filtered_reads,
-            PREPARE_GENOME.out.bwa_index,
-            ch_sort_bam
+            PREPARE_GENOME.out.bwa_index
         )
+
         ch_genome_bam        = ALIGN_BWA.out.bam
         ch_genome_bam_index  = ALIGN_BWA.out.bai
         ch_samtools_stats    = ALIGN_BWA.out.stats
@@ -213,29 +221,53 @@ workflow CRISPRSNF {
 
         ch_versions = ch_versions.mix(ALIGN_BWA.out.versions)
 
-        // STEP 05
-        // Dedup aligned BAMs using UMI
-
-        DEDUP_UMI_UMITOOLS (
-            ch_genome_bam.join(ch_genome_bam_index, by: [0]),
-            params.umitools_dedup_stats
-        )
-        ch_genome_bam        = DEDUP_UMI_UMITOOLS.out.bam
-        ch_genome_bam_index  = DEDUP_UMI_UMITOOLS.out.bai
-        ch_samtools_stats    = DEDUP_UMI_UMITOOLS.out.stats
-        ch_samtools_flagstat = DEDUP_UMI_UMITOOLS.out.flagstat
-        ch_samtools_idxstats = DEDUP_UMI_UMITOOLS.out.idxstats
-        if (params.bam_csi_index) {
-            ch_genome_bam_index = DEDUP_UMI_UMITOOLS.out.csi
-        }
-        
-        ch_versions = ch_versions.mix(DEDUP_UMI_UMITOOLS.out.versions)
-
 
     }else{
         exit 1, "ERROR: aligner must be bwa"
     }
+
+    // STEP 05
+    // DEDUP UMITOOLS
+    DEDUP_UMI_UMITOOLS (
+                ch_genome_bam.join(ch_genome_bam_index, by: [0]),
+                params.umitools_dedup_stats
+    )
+    ch_genome_bam        = DEDUP_UMI_UMITOOLS.out.bam
+    ch_genome_bam_index  = DEDUP_UMI_UMITOOLS.out.bai
+    ch_samtools_stats    = DEDUP_UMI_UMITOOLS.out.stats
+    ch_samtools_flagstat = DEDUP_UMI_UMITOOLS.out.flagstat
+    ch_samtools_idxstats = DEDUP_UMI_UMITOOLS.out.idxstats
+
+    ch_versions = ch_versions.mix(DEDUP_UMI_UMITOOLS.out.versions)
+
     
+    // STEP 06
+    // Assemble a teble with gRNA x Samples - write in python:
+
+    // Report
+
+    CUSTOM_DUMPSOFTWAREVERSIONS (
+        ch_versions.unique().collectFile(name: 'collated_versions.yml')
+    )
+
+    MULTIQC (
+            ch_multiqc_config,
+            ch_multiqc_custom_config.collect().ifEmpty([]),
+            CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect(),
+
+            ch_fail_trimming_multiqc.ifEmpty([]),
+            ch_fail_mapping_multiqc.ifEmpty([]),
+            ch_fail_strand_multiqc.ifEmpty([]),
+
+            FASTQC_CUTADAP_UMI.out.trim_log.collect{it[1]}.ifEmpty([]),
+            FASTQC_CUTADAP_UMI.out.umi_log.collect{it[1]}.ifEmpty([]),
+
+            ch_samtools_stats.collect{it[1]}.ifEmpty([]),
+            ch_samtools_flagstat.collect{it[1]}.ifEmpty([]),
+            ch_samtools_idxstats.collect{it[1]}.ifEmpty([])
+
+        )
+    multiqc_report = MULTIQC.out.report.toList()
        
 
 }

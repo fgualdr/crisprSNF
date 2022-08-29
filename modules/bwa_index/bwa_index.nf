@@ -5,14 +5,14 @@ process BWA_INDEX {
     label 'process_high_memory'
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/bwa-mem2:2.2.1--hd03093a_2' :
-        'quay.io/biocontainers/bwa-mem2:2.2.1--hd03093a_2' }"
+        'https://depot.galaxyproject.org/singularity/bwa:0.7.17--hed695b0_7' :
+        'quay.io/biocontainers/bwa:0.7.17--hed695b0_7' }"
 
     input:
     path fasta
 
     output:
-    path "bwamem2"       , emit: index
+    path "bwa"       , emit: index
     path "versions.yml" , emit: versions
 
     when:
@@ -21,28 +21,15 @@ process BWA_INDEX {
     script:
     def args = task.ext.args ?: ''
     """
-    mkdir bwamem2
-    bwa-mem2 \\
+    mkdir bwa
+    bwa \\
         index \\
         $args \\
-        $fasta -p bwamem2/${fasta}
+        -p bwa/${fasta.baseName} \\
+        $fasta
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        bwamem2: \$(echo \$(bwa-mem2 version 2>&1) | sed 's/.* //')
-    END_VERSIONS
-    """
-
-    stub:
-    """
-    mkdir bwamem2
-    touch bwamem2/${fasta}.0123
-    touch bwamem2/${fasta}.ann
-    touch bwamem2/${fasta}.pac
-    touch bwamem2/${fasta}.amb
-    touch bwamem2/${fasta}.bwt.2bit.64
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        bwamem2: \$(echo \$(bwa-mem2 version 2>&1) | sed 's/.* //')
+        bwa: \$(echo \$(bwa 2>&1) | sed 's/^.*Version: //; s/Contact:.*\$//')
     END_VERSIONS
     """
 }

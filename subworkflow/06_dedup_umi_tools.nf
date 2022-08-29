@@ -3,7 +3,7 @@
 //
 
 include { UMITOOLS_DEDUP     } from '../modules/umitools/umitools_dedup' 
-include { SAMTOOLS_INDEX     } from '../modules/samtools/samtools_index' 
+include { SAMTOOLS_INDEX     } from '../modules/samtools/index/samtools_index' 
 include { BAM_STATS_SAMTOOLS } from '../modules/samtools/bam_stats_samtools'
 
 workflow DEDUP_UMI_UMITOOLS {
@@ -29,14 +29,8 @@ workflow DEDUP_UMI_UMITOOLS {
 
     UMITOOLS_DEDUP.out.bam
         .join(SAMTOOLS_INDEX.out.bai, by: [0], remainder: true)
-        .join(SAMTOOLS_INDEX.out.csi, by: [0], remainder: true)
         .map {
-            meta, bam, bai, csi ->
-                if (bai) {
-                    [ meta, bam, bai ]
-                } else {
-                    [ meta, bam, csi ]
-                }
+            meta, bam, bai  -> [ meta, bam, bai ]
         }
         .set { ch_bam_bai }
 
@@ -47,7 +41,6 @@ workflow DEDUP_UMI_UMITOOLS {
     bam      = UMITOOLS_DEDUP.out.bam          // channel: [ val(meta), [ bam ] ]
 
     bai      = SAMTOOLS_INDEX.out.bai          // channel: [ val(meta), [ bai ] ]
-    csi      = SAMTOOLS_INDEX.out.csi          // channel: [ val(meta), [ csi ] ]
     stats    = BAM_STATS_SAMTOOLS.out.stats    // channel: [ val(meta), [ stats ] ]
     flagstat = BAM_STATS_SAMTOOLS.out.flagstat // channel: [ val(meta), [ flagstat ] ]
     idxstats = BAM_STATS_SAMTOOLS.out.idxstats // channel: [ val(meta), [ idxstats ] ]

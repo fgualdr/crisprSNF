@@ -23,7 +23,6 @@ process UMITOOLS_DEDUP {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def paired = meta.single_end ? "" : "--paired"
     def stats = get_output_stats ? "--output-stats $prefix" : ""
     """
     umi_tools \\
@@ -31,7 +30,6 @@ process UMITOOLS_DEDUP {
         -I $bam \\
         -S ${prefix}.bam \\
         $stats \\
-        $paired \\
         $args
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
