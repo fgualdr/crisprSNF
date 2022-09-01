@@ -9,15 +9,18 @@ process MULTIQC {
     input:
     path multiqc_config
     path multiqc_custom_config
-    path software_versions
 
-    path fail_trimming_summary
-    path fail_mapping_summary
-    path fail_strand_check
+
     path ('fastqc/*')
+
+    path ('umiextract/*') 
+    path ('cutadap/*')
+
     path ('samtools/stats/*')
     path ('samtools/flagstat/*')
     path ('samtools/idxstats/*')
+
+    
 
     output:
     path "*multiqc_report.html", emit: report

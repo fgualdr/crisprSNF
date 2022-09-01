@@ -123,8 +123,7 @@ include { PREPARE_GENOME } from './subworkflow/04_prepare_genoma'
 include { ALIGN_BWA } from './subworkflow/05_align_bwa'
 include { DEDUP_UMI_UMITOOLS } from './subworkflow/06_dedup_umi_tools'
 include { SAMTOOLS_SORT               } from './modules/samtools/sort/samtools_sort'
-include { MULTIQC                            } from './modules/multiqc'
-include { CUSTOM_DUMPSOFTWAREVERSIONS } from './modules/dumpsoftwareversions/dumpsoftwareversions'
+include { COUNT_GRNA_READS               } from './modules/counts/count_grna_reads'
 
 workflow CRISPRSNF {
 
@@ -242,33 +241,30 @@ workflow CRISPRSNF {
 
     
     // STEP 06
-    // Assemble a teble with gRNA x Samples - write in python:
+    // Assemble a teble with gRNA x Samples :
+    ch_genome_bam
+            .collect{it[1]}
+            .set { ch_counts_bam }
+    ch_genome_bam_index
+            .collect{it[1]}
+            .set { ch_counts_bai }
 
-    // Report
+    COUNT_GRNA_READS (
+        ch_counts_bam,
+        ch_counts_bai,
+        PREPARE_GENOME.out.chrom_bed
+    )
+    ch_grna_counts = COUNT_GRNA_READS.out.counts
+    ch_versions = ch_versions.mix(COUNT_GRNA_READS.out.versions)
 
+    // 07 From here we have a table 
+
+     //
+    // MODULE: Pipeline reporting
+    //
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml')
     )
-
-    MULTIQC (
-            ch_multiqc_config,
-            ch_multiqc_custom_config.collect().ifEmpty([]),
-            CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect(),
-
-            ch_fail_trimming_multiqc.ifEmpty([]),
-            ch_fail_mapping_multiqc.ifEmpty([]),
-            ch_fail_strand_multiqc.ifEmpty([]),
-
-            FASTQC_CUTADAP_UMI.out.trim_log.collect{it[1]}.ifEmpty([]),
-            FASTQC_CUTADAP_UMI.out.umi_log.collect{it[1]}.ifEmpty([]),
-
-            ch_samtools_stats.collect{it[1]}.ifEmpty([]),
-            ch_samtools_flagstat.collect{it[1]}.ifEmpty([]),
-            ch_samtools_idxstats.collect{it[1]}.ifEmpty([])
-
-        )
-    multiqc_report = MULTIQC.out.report.toList()
-       
 
 }
 

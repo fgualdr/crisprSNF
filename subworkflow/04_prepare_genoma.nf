@@ -32,6 +32,7 @@ workflow PREPARE_GENOME {
     CUSTOM_GETCHROMSIZES ( ch_fasta )
     ch_fai         = CUSTOM_GETCHROMSIZES.out.fai
     ch_chrom_sizes = CUSTOM_GETCHROMSIZES.out.sizes
+    ch_chrom_bed = CUSTOM_GETCHROMSIZES.out.bed
     ch_versions    = ch_versions.mix(CUSTOM_GETCHROMSIZES.out.versions)
 
     //
@@ -56,6 +57,7 @@ workflow PREPARE_GENOME {
     fasta            = ch_fasta            //    path: genome.fasta
     fai              = ch_fai              //    path: genome.fai
     chrom_sizes      = ch_chrom_sizes      //    path: genome.sizes
+    chrom_bed      = ch_chrom_bed      //    path: genome.bed
     bwa_index        = ch_bwa_index     //    path: bwa/index/
 
     versions         = ch_versions.ifEmpty(null) // channel: [ versions.yml ]

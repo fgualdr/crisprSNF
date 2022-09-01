@@ -8,7 +8,7 @@ include { BAM_STATS_SAMTOOLS } from '../modules/samtools/bam_stats_samtools'
 
 workflow DEDUP_UMI_UMITOOLS {
     take:
-    bam_bai         // channel: [ val(meta), [ bam ], [ bai/csi ] ]
+    bam_bai         // channel: [ val(meta), [ bam ], [ bai ] ]
     get_dedup_stats // boolean: true/false
 
     main:

@@ -48,7 +48,8 @@ workflow FASTQC_CUTADAP_UMI {
     untrimmed  = untrimmed    // channel: [ val(meta), [ reads ] ]
     trim_log   = trim_log        // channel: [ val(meta), [ log ] ]
     umi_log   = umi_log        // channel: [ val(meta), [ log ] ]
-
+    fastqc_zip = fastqc_zip
+    
     versions = ch_versions.ifEmpty(null) // channel: [ versions.yml ]
     
 }

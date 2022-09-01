@@ -12,6 +12,7 @@ process CUSTOM_GETCHROMSIZES {
 
     output:
     path '*.sizes'      , emit: sizes
+    path '*.bed'      , emit: bed
     path '*.fai'        , emit: fai
     path  "versions.yml", emit: versions
 
@@ -23,6 +24,7 @@ process CUSTOM_GETCHROMSIZES {
     """
     samtools faidx $fasta
     cut -f 1,2 ${fasta}.fai > ${fasta}.sizes
+    cat ${fasta}.fai | awk '{OFS=FS="\t"}{print \$1,"0",\$2-1}' | sed 's/[SL]N://g' > ${fasta}.bed
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         custom: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
