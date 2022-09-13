@@ -16,7 +16,7 @@ def helpMessage() {
 
     log.info"""
     Usage:
-      nextflow run ./crisprSNF --input design.csv --genome GRCh37 -profile singularity
+      nextflow run ./crisprSNF --input design.csv 
     Mandatory arguments:
       --input [file]                  Comma-separated file containing information about the samples in the experiment (see docs/usage.md) (Default: './design.csv')
       --fasta [file]                  Path to Fasta reference. This is the gRNA library in fasta format.
