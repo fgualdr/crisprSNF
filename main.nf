@@ -13,7 +13,7 @@ nextflow.enable.dsl = 2
 */
 
 def helpMessage() {
-    log.info nfcoreHeader()
+
     log.info"""
     Usage:
       nextflow run ./crisprSNF --input design.csv --genome GRCh37 -profile singularity
