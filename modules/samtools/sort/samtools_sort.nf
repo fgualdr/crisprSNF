@@ -10,7 +10,7 @@ process SAMTOOLS_SORT {
     tuple val(meta), path(bam)
 
     output:
-    tuple val(meta), path("*.bam"), emit: bam
+    tuple val(meta), path("*.sorted.bam"), emit: bam
     path  "versions.yml"          , emit: versions
 
     when:
@@ -20,12 +20,12 @@ process SAMTOOLS_SORT {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     
-    def avail_mem = task.memory ? ((task.memory.toGiga() - 6) / task.cpus).trunc() : false
-    def sort_mem = avail_mem && avail_mem > 2 ? "-m ${avail_mem}G" : '"-m 2G"'
+    def avail_mem = task.memory ? task.memory.toGiga() : false
+    def sort_mem = avail_mem ? "-m ${Math.round((avail_mem - 4) / task.cpus)}G" : '-m 2G'   
 
-    if ("$bam" == "${prefix}.bam") error "Input and output names are the same, use \"task.ext.prefix\" to disambiguate!"
+    if ("$bam" == "${prefix}.sorted.bam") error "Input and output names are the same, use \"task.ext.prefix\" to disambiguate!"
     """
-    samtools sort $args-@ ${task.cpus} $sort_mem -o ${prefix}.bam -T $prefix $bam
+    samtools sort $args -@ ${task.cpus} $sort_mem -o ${prefix}.sorted.bam -T $prefix $bam
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         samtools: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')
@@ -35,7 +35,7 @@ process SAMTOOLS_SORT {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    touch ${prefix}.bam
+    touch ${prefix}.sorted.bam
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         samtools: \$(echo \$(samtools --version 2>&1) | sed 's/^.*samtools //; s/Using.*\$//')

@@ -27,7 +27,6 @@ workflow FASTQC_CUTADAP_UMI {
     // iii) assign Umi to R1 discard R2
     umi_reads    = reads
     umi_log      = Channel.empty()
-
     UMIEXTRACT ( reads ).reads.set { umi_reads }
     umi_log = UMIEXTRACT.out.log
 

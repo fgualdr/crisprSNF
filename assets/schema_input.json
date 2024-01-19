@@ -1,0 +1,55 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://raw.githubusercontent.com/.../schema_input.json",
+    "title": "fgualdr/nf_chipmm pipeline - params.input schema",
+    "description": "Schema for the file provided with params.input",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "rid": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "RID id specific for individual run and individual sample"
+            },
+            "sid": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "SID id specific for the samples across run"
+            },
+            "sample": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Sample name or condition, this will be automatically combined with the replicate by an underscore "
+            },
+            "replicate": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Replicate number in the form of R1,R2,R3,.. or r1,r2,r3"
+            },
+            "path": {
+                "type": "string",
+                "pattern":"^\\S+$",
+                "errorMessage": "Path to the run folder as demultiplexed by the facility"
+            },
+            "lanes": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Given the schema of sample name demultiplexed which is: 'rid...sid...ll..R1..fastq.gz' ll being the lane number of the sequencer. if all is specified any lane will be combined " 
+            },
+            "is_input": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Whether the sample is an input or not TRUE/FALSE"
+            },
+            "which_input": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "errorMessage": "Which input to use for peak calling i.e. sample name as: sample'_'replicate specified for a particular sample. if only sample specific it takes any sample matching until '_R' is any specified it combines all inputs if present"
+            }
+        },
+        "required": ["rid","sid","sample","replicate","path","lanes","is_input","which_input"]
+    }
+}
+
+"rid","sid","sample","replicate","path","lanes","is_input","which_input"

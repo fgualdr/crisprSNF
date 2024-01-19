@@ -111,16 +111,30 @@ def check_samplesheet(file_in, file_out):
                     # in here we need to split by common partial match:
                     # Important the Lanes must be in the folder specified!
                     
+                    subfolders = list(p.glob("*"+rid+"*"+sid+"*"))
+                    search = '*fastq.gz'
+                    fastqs = list(subfolders[0].glob('./' + search))
+                    
+                    if len(fastqs) == 0:
+                        print_error(
+                                f"The path provided does not contain the files as RID+SID",
+                                "path:",
+                                path
+                            )
+
+
                     for ll in lanes:
-                        search = "./**/*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
-                        fastqs_1 = list(p.rglob(search))
-                        search = "./**/*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
-                        fastqs_2 = list(p.rglob(search))
+                        search = "*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
+                        fastqs_1 = list(subfolders[0].glob(search))
+                        search = "*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
+                        fastqs_2 = list(subfolders[0].glob(search))
+                        
                         if len(fastqs_1) ==0 and len(fastqs_2) ==0:
                             print(
                                 f"ERROR: There must be both R1 and R2. R1 containing the gRNA and R2 the UMI"
                             )
                             sys.exit(1)
+                        
                         sample_info = [str(fastqs_1[0]), str(fastqs_2[0]), grna_start,grnalength,r1_scaffold_trim,r1_scaffold_pos,umi_read,umi_pos,umi_length,r2_scaffold_trim,r2_scaffold_pos]
                         # for each we append:
                         if sample not in sample_mapping_dict:
@@ -134,14 +148,17 @@ def check_samplesheet(file_in, file_out):
                 elif all(x=='any' for (x) in lanes):
                     print("procede with any lane")
                     # we need to get to the unique elements of "Lanes"
-                    search = "./**/*"+rid+"*"+sid+'*R1*fastq.gz'
-                    fastqs = list(p.rglob(search))
+                    subfolders = list(p.glob("*"+rid+"*"+sid+"*"))
+                    search = '*R1*fastq.gz'
+                    fastqs = list(subfolders[0].glob('./' + search))
                     fastqs = [ re.sub(r'^.*?_L', 'L', str(x)).split('_')[0] for x in fastqs]
+                    
                     for ll in fastqs:
-                        search = "./**/*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
-                        fastqs_1 = list(p.rglob(search))
-                        search = "./**/*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
-                        fastqs_2 = list(p.rglob(search))
+                        search = "*"+rid+"*"+sid+'*'+ll+'*R1*fastq.gz'
+                        fastqs_1 = list(subfolders[0].glob(search))
+                        search = "*"+rid+"*"+sid+'*'+ll+'*R2*fastq.gz'
+                        fastqs_2 = list(subfolders[0].glob(search))
+                        
                         if len(fastqs_1) ==0 and len(fastqs_2) ==0:
                             print(
                                 f"ERROR: There must be both R1 and R2. R1 containing the gRNA and R2 the UMI"
