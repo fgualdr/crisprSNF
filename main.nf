@@ -12,10 +12,14 @@ nextflow.enable.dsl = 2
 */
 
 def helpMessage() {
-    log.info nfcoreHeader()
+
     log.info"""
     Usage:
+<<<<<<< HEAD
       nextflow run ./crisprSNF --input design.csv --fasta ... -profile singularity
+=======
+      nextflow run ./crisprSNF --input design.csv 
+>>>>>>> 7e8ae4263c5c52efa54fb6476e6596f0d74b1d95
     Mandatory arguments:
       --input [file]                  Comma-separated file containing information about the samples in the experiment (see docs/usage.md) (Default: './design.csv')
       --fasta [file]                  Path to Fasta reference. This is the gRNA library in fasta format.
