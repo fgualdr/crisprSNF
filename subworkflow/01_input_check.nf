@@ -1,7 +1,3 @@
-//
-// Check input samplesheet and get read channels
-//
-
 process SAMPLESHEET_CHECK {
     tag "$samplesheet"
 
@@ -62,19 +58,14 @@ def create_fastq_channel(LinkedHashMap row) {
     meta.umi_length          = row.umi_length
     meta.r2_scaffold_trim    = row.r2_scaffold_trim
     meta.r2_scaffold_pos    = row.r2_scaffold_pos
-
-
     // add path(s) of the fastq file(s) to the meta map
     def fastq_meta = []
     if (!file(row.fastq_1).exists()) {
         exit 1, "ERROR: Please check input samplesheet -> Read 1 FastQ file does not exist!\n${row.fastq_1}"
     }
-
     if (!file(row.fastq_2).exists()) {
         exit 1, "ERROR: Please check input samplesheet -> Read 2 FastQ file does not exist!\n${row.fastq_2}"
     }
-    
     fastq_meta = [ meta, [ file(row.fastq_1), file(row.fastq_2) ] ]
-    
     return fastq_meta
 }

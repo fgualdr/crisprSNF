@@ -1,7 +1,7 @@
 process UMIEXTRACT {
     tag "$meta.id"
     label "process_low"
-
+    
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/umi_tools:1.1.2--py38hbff2b2d_1' :
         'quay.io/biocontainers/umi_tools:1.1.2--py38hbff2b2d_1' }"
@@ -20,15 +20,8 @@ process UMIEXTRACT {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-
     def umi_length = meta.umi_length.toInteger()
     def pattern = 'N'*umi_length
-
-    // For now the library uses UMI only on one R2
-    // For this design we consider this the only
-    // as we use umi_tools it expect the UMI always on the primary read
-    // Therefore we need to swap r1 and r2:
-
     """
     umi_tools extract \\
             -I ${reads[1]} \\
@@ -46,5 +39,4 @@ process UMIEXTRACT {
             umitools: \$(umi_tools --version 2>&1 | sed 's/^.*UMI-tools version://; s/ *\$//')
     END_VERSIONS
     """
-    
 }

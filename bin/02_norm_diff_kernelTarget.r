@@ -15,12 +15,8 @@ library(MASS)
 library(BiocParallel)
 library(snow)
 
-
-
 # # # Custom functions:
-
 `%!in%` = Negate(`%in%`)
-
 # Function to perform the orthogonal projection of a point onto a line:
 
 orthogonal_projection <- function(p, l1, l2) {
@@ -134,11 +130,18 @@ random_gen <- function(l){
 # use bplapply and we want to save the results to file and save memory usage:
 # it will need an increamental number so the list will include the "id" slot too:
 mass_kde2_parallel <- function(l){
-
+        h = c(MASS::bandwidth.nrd(l[["xy"]]$n_hits), MASS::bandwidth.nrd(l[["xy"]]$log2fc))
+        # as n_hits are discrete entity the badnwith will always be 1 so we set it to 1:
+        h[1] = 1
+        # on the othet hand if the log2fc has estimated bandwidth of 0 we through an error:
+        if(h[2] == 0){
+            stop("ERROR: bandwidth for log2fc is 0")
+        }
         kde2d <- MASS::kde2d( 
             l[["xy"]]$n_hits, 
             l[["xy"]]$log2fc, 
             n=c( l[["n_x"]]+2, l[["n_y"]] ), 
+            h = h,
             lims = c(
                     0,l[["n_x"]]+1, # for the x axis we consider the number of hits
                     c(min(l[["n_v"]])*2, max(l[["n_v"]])*2) # for the y axis we consider the log2fc
@@ -159,8 +162,15 @@ option_list = list(
     make_option(c("-f", "--file"), type="character", default=NULL, help="Path to the input file of counts"),
     make_option(c("-p", "--processes"), type="integer", default=1, help="Number of processes to use for the normalization"),
     make_option(c("-o", "--skip_outliers"), type="character", default="true", help="whether or not to remove outliers"),
-    make_option(c("-t", "--target"), type="character", default="true", help="name of target sample in count table"),
-    make_option(c("-c", "--control"), type="character", default="true", help="name of control sample in count table")
+    make_option(c("-t", "--target"), type="character", default=NULL, help="name of target sample in count table"),
+    make_option(c("-c", "--control"), type="character", default=NULL, help="name of control sample in count table"),
+    # add the naming of the gRNA so to identify non-targeting gRNA eill be "scramble" or "random"_1 .._2 etc
+    make_option(c("-ns", "--naming_non_targeting"), type="character", default=NULL, help="naming of the non_targeting gRNA so to identify non-targeting gRNA eill be 'scramble' or 'random'_1 .._2 etc"),
+    make_option(c("-h", "--help"), action="store_true", help="Print help"),
+    # get the column position where the naming of gRNA is:
+    make_option(c("-g", "--gRNA_column"), type="integer", default=1, help="column position where the naming of gRNA is"),
+    # add the option to perform the orthogonal projection if Plasmid was sequenced - will be true false
+    make_option(c("-pl", "--plasmid"), type="character", default="false", help="whether to perform the orthogonal projection if Plasmid was sequenced - will be true false")
 )
 
 opt_parser <- OptionParser(option_list=option_list)
@@ -191,6 +201,9 @@ if (is.null(opt$control)){
     stop("Please provide the name of the control sample.", call.=FALSE)
 }
 
+if (is.null(opt$naming_non_targeting)){
+    cat("the null model bivariate distribution will be done using all gRNA\n")
+}
 
 # print the options:
 
@@ -242,24 +255,45 @@ x = x[,colnames(x)!="NA"]
 # first two columns are start and end:
 samples.vec <- colnames(x)[-c(1,2)]
 
+if (opt$plasmid == "true"){
+    # check if Plasmid 
+    cat("Perform the orthogonal projection if Plasmid was sequenced\n")
+    w = grep("plasmid",tolower(samples.vec))
+    if(length(w) <= 1){
+        stop("ERROR: Plasmid was not sequenced and must have Plasmid as name and match the replicates of the other samples OR\n 
+        if only one is provided is pointless to correect as all samples will be exposed to the same library")
+    }else{
+        name_components_plasmid <- strsplit(samples.vec[grepl("plasmid",tolower(samples.vec))], "_")
+        name_components_plasmid <- do.call(rbind, name_components_plasmid)
+        # remove columns with only one unique value:
+        name_components_plasmid <- name_components_plasmid[, apply(name_components_plasmid, 2, function(x) length(unique(x)) > 1),drop=FALSE]
+        name_components_plasmid <- cbind("PLASMID", name_components_plasmid)
+    }
+}
+
 # We create the DESIGN from the column names of the input file:
 name_components_samp <- strsplit(samples.vec[!grepl("plasmid",tolower(samples.vec))], "_")
 name_components_samp <- do.call(rbind, name_components_samp)
-# remove columns with only one unique value:
 name_components_samp <- name_components_samp[, apply(name_components_samp, 2, function(x) length(unique(x)) > 1)]
-# the plsmid:
-name_components_plasmid <- strsplit(samples.vec[grepl("plasmid",tolower(samples.vec))], "_")
-name_components_plasmid <- do.call(rbind, name_components_plasmid)
-# remove columns with only one unique value:
-name_components_plasmid <- name_components_plasmid[, apply(name_components_plasmid, 2, function(x) length(unique(x)) > 1),drop=FALSE]
-name_components_plasmid <- cbind("PLASMID", name_components_plasmid)
-if(dim(name_components_plasmid)[2] == dim(name_components_samp)[2]){
-    name_components <- rbind(name_components_samp, name_components_plasmid)
-}else{
-    stop("ERROR: samples names with issues")
+
+# if name_components_plasmid exists we add it to name_components_samp:
+if(exists("name_components_plasmid")){
+    if(dim(name_components_plasmid)[2] == dim(name_components_samp)[2]){
+        name_components <- rbind(name_components_samp, name_components_plasmid)
+    }else{
+        stop("ERROR: samples names with issues")
+    }
 }
 
-colnames(name_components) = c("Sample_Condition","Sample_Replicate")
+
+# the column contaitning _r[0-9], _R[0-9] or _REP[0-9] or _rep[0-9] will be the replicate:
+name_components <- as.data.frame(name_components,stringsAsFactors=FALSE)
+name_components$Sample_Replicate <- apply(name_components,1,function(x){
+    return(paste0(x[which(grepl("r[0-9]|R[0-9]|REP[0-9]|rep[0-9]",x))],collapse=""))
+})
+
+stop("!!!!!!!!!!!")
+
 deg_design = as.data.frame(name_components,stringsAsFactors=FALSE)
 rownames(deg_design) = c(samples.vec[!grepl("plasmid",tolower(samples.vec))],samples.vec[grepl("plasmid",tolower(samples.vec))])
 deg_design$Sample_ID = rownames(deg_design)
@@ -315,44 +349,47 @@ ref = colnames(x)[grep("presort",tolower(colnames(x)))]
 # We normalize the data:
 Result = RunNorm(x,deg_design,fix_reference=ref,row_name_index=1,saving_path=save_folder,n_pop=1,n_pop_reference=1,BiocParam=param)
 QC_plot(Result,deg_design,saving_path=save_folder)
-
 colData = Result$scaling_factors
 mat = Result$norm_mat
 mat_correct = mat
 deg_design = deg_design[order(deg_design$Sample_Replicate),]
-# Norm on PLASMID BY Replicate:
-ls = list()
 
-# Perform the orthogonal propjection saving the transformation vector per raw:
-# Loop thorugh deg_design:
+# this is done only if Plasmid was sequenced:
 
-for(rr in rownames(mat)){
-    # Line through 0,1
-    l1 <- rep(0,length(unique(deg_design$Sample_Replicate)))
-    l2 <- rep(1,length(unique(deg_design$Sample_Replicate)))
-    # PLASMID:
-    mat_p = mat[rr,rownames(deg_design[deg_design$Sample_Condition == "PLASMID",])]
-    result <- orthogonal_projection(mat_p, l1, l2)
-    projection <- result$projection
-    transformation <- result$transformation
-    mat_p = mat_p+transformation
-    # High
-    mat_h = mat[rr,rownames(deg_design[grep("high",tolower(deg_design$Sample_Condition)),])] + transformation
-    # Low
-    mat_l = mat[rr,rownames(deg_design[grep("low",tolower(deg_design$Sample_Condition)),])] + transformation
-    # Prestort
-    mat_ps = mat[rr,rownames(deg_design[grep("presort",tolower(deg_design$Sample_Condition)),])] + transformation
-    add = unlist(c(mat_p,mat_ps,mat_l,mat_h))
-    ls[[rr]] = add
+if(opt$plasmid == "true"){
+    # Norm on PLASMID BY Replicate:
+    ls = list()
+    # Perform the orthogonal propjection saving the transformation vector per raw:
+    # Loop thorugh deg_design:
+
+    for(rr in rownames(mat)){
+        # Line through 0,1
+        l1 <- rep(0,length(unique(deg_design$Sample_Replicate)))
+        l2 <- rep(1,length(unique(deg_design$Sample_Replicate)))
+        # PLASMID:
+        mat_p = mat[rr,rownames(deg_design[deg_design$Sample_Condition == "PLASMID",])]
+        result <- orthogonal_projection(mat_p, l1, l2)
+        projection <- result$projection
+        transformation <- result$transformation
+        mat_p = mat_p+transformation
+        # High
+        mat_h = mat[rr,rownames(deg_design[grep("high",tolower(deg_design$Sample_Condition)),])] + transformation
+        # Low
+        mat_l = mat[rr,rownames(deg_design[grep("low",tolower(deg_design$Sample_Condition)),])] + transformation
+        # Prestort
+        mat_ps = mat[rr,rownames(deg_design[grep("presort",tolower(deg_design$Sample_Condition)),])] + transformation
+        add = unlist(c(mat_p,mat_ps,mat_l,mat_h))
+        ls[[rr]] = add
+    }
+    mat = as.data.frame(do.call(rbind,ls),stringsAsFactors=FALSE)
+    write.table(mat,paste0(save_folder,"/Normalized_matrix_post_PlasmidCorrection.txt"),sep="\t",col.names=NA)
+    Result$norm_mat = mat
+    save_folder = paste0(save_folder,"/corrected/")
+    dir.create(save_folder)
+    QC_plot(Result,deg_design,saving_path=save_folder)
 }
 
 
-mat = as.data.frame(do.call(rbind,ls),stringsAsFactors=FALSE)
-write.table(mat,paste0(save_folder,"/Normalized_matrix_post_PlasmidCorrection.txt"),sep="\t",col.names=NA)
-Result$norm_mat = mat
-save_folder = paste0(save_folder,"/corrected/")
-dir.create(save_folder)
-QC_plot(Result,deg_design,saving_path=save_folder)
 
 # Perform DESEQ2 analysis - we will filter the data beforehand based on Average count per gRNA:
 AV = as.data.frame(matrix(NA,ncol=length(unique(colData$Sample_Condition)),nrow= nrow(mat) ),stringsAsFactors=FALSE)
@@ -374,7 +411,6 @@ rn =unique(unlist(rn))
 mat = round(mat[rn,rownames(colData)],0)
 mat = mat + abs(min(mat))
 mat = mat[which(rowMeans(mat)<2000 & rowMeans(mat)>10),]
-
 
 formula = ~ Sample_Replicate + Sample_Condition   
 dds_ex <- DESeq2::DESeqDataSetFromMatrix(countData = mat, colData = colData, design = formula)
@@ -810,6 +846,4 @@ dev.off()
 ## from the above code we are assessing the probability to observe a determinied number of gRNA "scoring" at a specific log2fc cutoff per target.
 ## To get an FDR we need to compare the above probability to the probability of observing the same number of gRNA "scoring" at a specific log2fc cutoff per target in the 
 ## random data - this is already done as the random is used to generate the bi-variate frequency distribution.
-## 
-
-# To get a global score per target and therefore rank them providing 
+# To get a global score per target and therefore rank them providing:

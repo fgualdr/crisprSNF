@@ -21,7 +21,6 @@ process NORMDEG {
     def name = "${meta.name}"
     
     """
-
     02_norm_diff_kernelTarget.r \\
             -f ${count_table} \\
             -p ${task.cpus} \\
@@ -29,5 +28,4 @@ process NORMDEG {
             -t ${target} \\
             -c ${control}
     """
-    
 }
